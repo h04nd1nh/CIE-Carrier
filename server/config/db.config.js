@@ -1,6 +1,6 @@
 module.exports = {
     HOST: "",
-    PORT: ,
+    PORT: 8080,
     USER: "",
     PASSWORD: "",
     DB: "",
