@@ -5,9 +5,9 @@ module.exports = (sequelize, Sequelize) => {
           sub_id: {
             type: Sequelize.INTEGER,
           },
-          recuitment_id: {
-            type: Sequelize.INTERGER,
-          },
+          // recuitment_id: {
+          //   type: Sequelize.INTERGER,
+          // },
         },
       {
         tableName: "major_recuitment",                                                                                                           

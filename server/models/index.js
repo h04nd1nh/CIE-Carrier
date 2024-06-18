@@ -31,5 +31,7 @@ db.skill = require("../models/skill.model.js")(sequelize, Sequelize);
 db.sub_major = require("../models/sub_major.model.js")(sequelize, Sequelize);
 db.user_skill = require("../models/user_skill.model.js")(sequelize, Sequelize);
 db.user = require("../models/user.model.js")(sequelize, Sequelize);
+db.soft_skill = require("../models/soft_skill.model.js")(sequelize, Sequelize);
+db.hard_skill = require("../models/hard_skill.model.js")(sequelize, Sequelize);
 
 module.exports = db;

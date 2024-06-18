@@ -1,6 +1,6 @@
 const db = require("../models");
 const config = require("../config/auth.config");
-const Employee = db.employee;
+const user = db.user;
 
 const Op = db.Sequelize.Op;
 
@@ -8,14 +8,15 @@ var jwt = require("jsonwebtoken");
 var bcrypt = require("bcryptjs");
 
 exports.signup = (req, res) => {
-  // Save Employee to Database
-  Employee.create({
+  // Save user to Database
+  console.log(req.body.email)
+  user.create({
     email: req.body.email,
     name: req.body.name,
     password: bcrypt.hashSync(req.body.password, 8)
   })
-    .then(employee => {
-      res.send({ message: "Employee registered successfully!" });
+    .then(user => {
+      res.send({ message: "user registered successfully!" });
     })
     .catch(err => {
       res.status(500).send({ message: err.message });
@@ -23,13 +24,13 @@ exports.signup = (req, res) => {
 };
 
 exports.signin = (req, res) => {
-  Employee.findOne({
+  user.findOne({
     where: {
       email: req.body.email || ""
     }
   })
-    .then(employee => {
-      if (!employee) {
+    .then(user => {
+      if (!user) {
         return res.status(201).send({
           accessToken: null,
           message: "Invalid Password!"
@@ -38,17 +39,17 @@ exports.signin = (req, res) => {
 
       var passwordIsValid = bcrypt.compareSync(
         req.body.password,
-        employee.password
+        user.password
       );
 
       if (!passwordIsValid) {
         return res.status(201).send({
           accessToken: null,
-          message: "Employee not found!"
+          message: "user not found!"
         });
       }
 
-      const token = jwt.sign({ id: employee.id },
+      const token = jwt.sign({ id: user.id },
                               config.secret,
                               {
                                 algorithm: 'HS256',
@@ -57,9 +58,9 @@ exports.signin = (req, res) => {
                               });
 
       res.status(200).send({
-        id: employee.id,
-        name: employee.name,
-        email: employee.email,
+        id: user.id,
+        name: user.name,
+        email: user.email,
         accessToken: token
       });
     })

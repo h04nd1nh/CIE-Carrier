@@ -1,79 +1,116 @@
 const db = require("../models");
 const config = require("../config/auth.config");
+const jwt = require("jsonwebtoken");
+const { Sequelize, DataTypes } = require('sequelize');
 
-const user = db.user
-const experience = db.experience
-const academic = db.academic
-const user_skill = db.user_skill
-const prize = db.prize
+const PrimaryMajor = db.primary_major; // Đảm bảo PrimaryMajor được import và sử dụng chính xác
 
 const Op = db.Sequelize.Op;
+const bcrypt = require("bcryptjs");
 
-var jwt = require("jsonwebtoken");
-var bcrypt = require("bcryptjs");
+exports.createUserResource = async (req, res) => {
+  // const token = req.headers["access_token"];
+  // if (!token) {
+  //   return res.status(401).send({ message: "No token provided!" });
+  // }
+  
+  try {
+    // const decoded = jwt.verify(token, config.secret, {
+    //   algorithms: ["HS256"],
+    // });
+    // const userId = decoded.id;
 
-exports.createUserResource = (req, res) => {
-    const { information, experience, academic, prize } = req.body;
-    const info = information[0];
-    const { name, email, mobile_phone, address } = info;
+    const { name, email, phone, address, experiences, hardSkills, softSkills, awards } = req.body;
+    const _experiences = [];
+    const _awards = [];
+    const _softSkills = [];
+    const _hardSkills = [];
 
-    experience.forEach(exp => {
-        const { degree_experience, major_experience, company_experience, description_experience } = exp;
-        // Sử dụng các giá trị lấy được ở đây
+    experiences.forEach((exp) => {
+      _experiences.push(exp);
+      // Sử dụng các giá trị lấy được ở đây
     });
 
-    academic.forEach(acad => {
-        const { school, major_academic, degree_academic, major_subject_1, major_subject_2, major_subject_3 } = acad;
-        // Sử dụng các giá trị lấy được ở đây
+    softSkills.forEach((soft_skill) => {
+      _softSkills.push(soft_skill);
     });
 
-    prize.forEach(pr => {
-        const { prize_name, prize_organization, prize_date } = pr;
-        // Sử dụng các giá trị lấy được ở đây
+    hardSkills.forEach((hard_skill) => {
+      _hardSkills.push(hard_skill);
     });
 
-    const allFieldsProvided 
-    = information.every(exp => {
-        return exp.hasOwnProperty('name') &&
-               exp.hasOwnProperty('email') &&
-               exp.hasOwnProperty('mobile_phone') &&
-               exp.hasOwnProperty('address');
-    }) 
-    && experience.every(exp => {
-        return exp.hasOwnProperty('degree_experience') &&
-               exp.hasOwnProperty('major_experience') &&
-               exp.hasOwnProperty('company_experience') &&
-               exp.hasOwnProperty('description_experience');
-    }) 
-    && academic.every(acad => {
-        return exp.hasOwnProperty('school') &&
-               exp.hasOwnProperty('major_academic') &&
-               exp.hasOwnProperty('degree_academic') &&
-               exp.hasOwnProperty('major_subject_1') &&
-               exp.hasOwnProperty('major_subject_2') &&
-               exp.hasOwnProperty('major_subject_3');
-    }) 
-    && prize.every(pr => {
-        return exp.hasOwnProperty('prize_name') &&
-               exp.hasOwnProperty('prize_organization') &&
-               exp.hasOwnProperty('prize_date');
+    awards.forEach((pr) => {
+      _awards.push(pr);
+      // Sử dụng các giá trị lấy được ở đây
     });
 
-
-
-    if(!allFieldsProvided) {
-        return res.status(400).send({
-            message: "Invalid infomation"
-        })
-    } else {
-        try {
-
-        } catch (err) {
-            return res.status(500).json({
-                message: "Error when create record"
-            })
-        }
+    if (!name && !email && !phone && !address && !experiences && !hardSkills && !softSkills && !awards) {
+      return res.status(400).send({
+        message: "Invalid information",
+      });
     }
 
+    // Gửi yêu cầu đến service suggest
+    const response = await fetch("http://127.0.0.1:5000/api/service/suggest", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(req.body),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+
+    // Xử lý phản hồi từ service suggest
+    const responseData = await response.json();
+    console.log("Response:", responseData);
+
+    // Lấy danh sách recommend từ phản hồi
+    const recommendations = responseData.result
+      .map((item) => item.recommend)
+      .flat();
+
+    // Tìm danh sách ID của các primary_title từ recommendations
+    const idList = await findPrimaryTitles(recommendations);
+    console.log(idList);
+    // Trả về response JSON với danh sách ID
+    return res.status(200).send({
+      message: "Successfully",
+      recommendations: idList,
+    });
+
+  } catch (error) {
+    console.error("Error:", error);
+    return res.status(500).send({
+      message: "Error when processing request",
+      error: error.toString(),
+    });
+  }
 };
 
+async function findPrimaryTitles(recommendations) {
+    try {
+      // Tìm các primary_title dựa trên recommendations
+      const primaryTitles = await PrimaryMajor.findAll({
+        attributes: ['id', 'sub_title_1'], // Lấy cả ID và sub_title_1
+        where: {
+          primary_title: {
+            [Sequelize.Op.in]: recommendations,
+          },
+        },
+      });
+  
+      // Chuyển đổi thành danh sách các đối tượng { id: id, sub_title_1: sub_title_1 }
+      const idList = primaryTitles.map(item => ({
+        id: item.id,
+        sub_title_1: item.sub_title_1
+      }));
+  
+      return idList;
+    } catch (error) {
+      console.error('Lỗi khi tìm primary_title:', error);
+      throw error; // Xử lý lỗi tại đây nếu cần thiết
+    }
+  }

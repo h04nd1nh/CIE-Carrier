@@ -21,7 +21,9 @@ app.use(bodyParser.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cors({
-    origin: "http://localhost:8989",
+  origin: "http://localhost:3000",  // Allow requests from this origin
+  methods: ['GET', 'POST'],  // Allow these HTTP methods
+  allowedHeaders: ['Content-Type', 'access_token'],  // Allow these headers
 }));
 app.use(morgan("common"));
 
@@ -31,10 +33,9 @@ app.get("/", (req, res) => {
   
 // routes
 require("./routes/auth.route")(app);
-require("./routes/action_history.route")(app);
-require("./routes/state.route")(app);
-
-
+require("./routes/user.route")(app);
+require("./routes/major.route")(app);
+require("./routes/skill.route")(app);
 
 const PORT = process.env.PORT || 8989;
 app.listen(PORT, () => {
